@@ -1,2 +1,2 @@
-# PLRU
-Preservation of Locality Relation for Unsupervised feature selection
+# PLRU (Preservation of Locality Relation for Unsupervised feature selection)
+
