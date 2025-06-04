@@ -55,7 +55,7 @@ function [solution] = solve_by_interiorpoint(G, x0, lb, ub, optimization_option)
         stop = false;
         if strcmp(state, 'iter')
             fitness_history(end+1) = optimValues.fval;
-            %fprintf('İterasyon %d: fval = %.6f\n', optimValues.iteration, optimValues.fval);
+            %fprintf('Iteration %d: fval = %.6f\n', optimValues.iteration, optimValues.fval);
             fprintf('%.6f, ', optimValues.fval);
         end
     end
@@ -99,15 +99,15 @@ function [solution] = solve_by_interiorpoint(G, x0, lb, ub, optimization_option)
         disp('Detailed search with BFGS')
         options.OptimalityTolerance = 1e-10;
         options.StepTolerance = 1e-12;
-        options.MaxIterations = 1e+4;
-        options.MaxFunctionEvaluations = 1e+5;
+        options.MaxIterations = 3000;
+        options.MaxFunctionEvaluations = 10000;
         options.HessianApproximation = 'bfgs';
     elseif strcmpi(optimization_option, 'ds-lbfgs') % Detailed Search
         disp('Detailed search with L-BFGS')
         options.OptimalityTolerance = 1e-10;
         options.StepTolerance = 1e-12;
-        options.MaxIterations = 1e+4;
-        options.MaxFunctionEvaluations = 1e+5;
+        options.MaxIterations = 3000;
+        options.MaxFunctionEvaluations = 10000;
         options.HessianApproximation = 'lbfgs';
     else
         disp('Default settings')
