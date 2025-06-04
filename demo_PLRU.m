@@ -8,7 +8,7 @@ clear;
 % cnae-9, connectionist_bench, gait_classification, har_aal, hill_valley,
 % libras_movement, lsvt_voice_rehabilitation, madelon, musk,
 % optical_recognition, semeion_handwritten_digit, tuandromd
-S = load('connectionist_bench');
+S = load('cnae-9');
 X = S.X;
 Y = categorical(S.Y);
 
@@ -33,10 +33,10 @@ d = size(X, 2);
 acc_results = zeros(d, 1);
 nmi_results = zeros(d, 1);
 
-
 % Clustering analysis
 cats = categories(Y);
 num_Clusters = numel(cats);
+disp("Clustering results:");
 for i = 1 : numel(I)
     idx = kmeans(X(:, I(1:i)), num_Clusters);
     idx(isnan(idx)) = round(mean(idx,"omitnan"));
@@ -44,15 +44,14 @@ for i = 1 : numel(I)
     G = grp2idx(cats(idx));
     nmi_results(i) = NMI(YY, G);
 end
-disp("Clustering results:");
 fprintf("max: %1.8f\t mean: %1.8f\t min: %1.8f\n", max(nmi_results), mean(nmi_results), min(nmi_results));
 
 
 % Classification analysis
+disp("Classification results:");
 for i = 1 : numel(I)
     acc_results(i) = classify(X(:, I(1:i)), Y, 'KNN');
 end
-disp("Classification results:");
 fprintf("max: %1.8f\t mean: %1.8f\t min: %1.8f\n", max(acc_results), mean(acc_results), min(acc_results));
 
 
@@ -97,45 +96,48 @@ end
 
 %% Normalized Mutual Information
 function [ NMI_yc ] = NMI(Y, C)
+    % Ensure column vectors
+    Y = Y(:);
+    C = C(:);
 
-    M = confusionmat(Y, C);
-    %confusionchart(M);
+    % Check length consistency
+    assert(length(Y) == length(C), 'Inputs Y and C must be of the same length');
 
-    % Total number of instances
-    N = sum(M(:));
-    
-    % Calculate the probabilities of the class labels
-    P_y = sum(M, 2) / N;
+    n = length(Y);
 
-    % Calculate the entropy of the class labels
-    H_y = -sum(P_y .* log2_(P_y));
-    
-    % Calculate the probabilities of the cluster labels
-    P_c = sum(M, 1) / N;
+    % Unique labels and clusters
+    unique_Y = unique(Y);
+    unique_C = unique(C);
+    c1 = length(unique_Y);
+    c2 = length(unique_C);
 
-    % Calculate the entropy of the cluster labels
-    H_c = -sum(P_c .* log2_(P_c));
+    % One-hot encoding matrices
+    My = double(repmat(Y, 1, c1) == repmat(unique_Y', n, 1));  % n x c1
+    Mc = double(repmat(C, 1, c2) == repmat(unique_C', n, 1));  % n x c2
 
-    % Calculate the probabilities of class labels within each cluster
-    P_yc = M ./ sum(M, 1);
-    P_yc(isnan(P_yc)) = 0;
+    % Marginal distributions P(Y) and P(C)
+    P_y = sum(My, 1) / n;   % 1 x c1
+    P_c = sum(Mc, 1) / n;   % 1 x c2
 
-    % Calculate the entropy of class labels within each cluster
-    H_yc = sum(P_c .* -sum(P_yc .* log2_(P_yc)));
+    % Entropy function: handles 0 * log(0) = 0 convention
+    entropy = @(P) -sum(P(P > 0) .* log2(P(P > 0)));
 
-    % Calculate the mutual information
-    I_yc = H_y - H_yc;
+    % Entropies H(Y) and H(C)
+    H_y = entropy(P_y);
+    H_c = entropy(P_c);
 
-    % Calculate the normalized mutual information
-    NMI_yc = 2 * I_yc / (H_y + H_c);
-end
+    % Joint distribution P(Y,C)
+    P_joint = (My' * Mc) / n;   % c1 x c2
+    P_outer = P_y' * P_c;       % outer product of marginals
 
+    % Mask to avoid log2(0)
+    mask = P_joint > 0;
 
+    % Mutual Information I(Y;C)
+    MI = sum(P_joint(mask) .* log2(P_joint(mask) ./ P_outer(mask)));
 
-%% Calculate log2(X) by turning Inf's into 0
-function Y = log2_(X)
-    Y = log2(X);
-    Y(isinf(Y)&~isinf(X)) = 0;
+    % Normalized Mutual Information (geometric mean version)
+    NMI_yc = MI / sqrt(H_y * H_c);
 end
 
 
